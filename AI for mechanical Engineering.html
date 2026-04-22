@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forces & Free Body Diagrams - Interactive Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body {
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pop { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+  .fade-in { animation: fadeSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .pop-in { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  .btn {
+    padding: 12px 24px; border-radius: 12px; border: none; font-size: 14px;
+    font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+    display: inline-flex; align-items: center; gap: 8px; font-family: inherit;
+    position: relative; overflow: hidden;
+  }
+  .btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .btn:active { transform: translateY(0) scale(0.98); }
+  .btn-outline { background: transparent; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  .btn-sm {
+    padding: 7px 13px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease; font-family: inherit; border: 1.5px solid;
+    background: transparent;
+  }
+  .btn-sm:hover { filter: brightness(0.95); }
+
+  .card {
+    background: #ffffff; border: 1px solid #e2e8f0;
+    border-radius: 16px; padding: 24px; margin-bottom: 16px;
+    transition: all 0.3s ease; position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card-accent-top { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0; }
+  .card:hover { border-color: #cbd5e1; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+  .type-card { cursor: pointer; }
+  .type-card:hover { transform: translateY(-2px); }
+
+  .scene-box {
+    background: #f1f5f9; border-radius: 12px; border: 1px solid #e2e8f0;
+    padding: 16px; margin-bottom: 16px;
+  }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+    border-radius: 6px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  .progress-bar {
+    height: 4px; background: #e2e8f0; border-radius: 4px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: white; box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+  }
+  .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: #0f172a; }
+  .logo-sub { font-size: 11px; color: #94a3b8; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .score-badge {
+    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 8px 16px; font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; color: #1e293b;
+  }
+
+  .feedback { padding: 16px; border-radius: 12px; margin-top: 16px; }
+  .feedback-correct { border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+  .feedback-wrong { border: 1px solid rgba(239,68,68,0.25); background: rgba(239,68,68,0.04); }
+
+  .eq-option {
+    text-align: left; padding: 12px 16px; border-radius: 10px; border: 1.5px solid;
+    color: #1e293b; font-size: 14px; font-family: 'JetBrains Mono', monospace;
+    font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: all 0.2s; background: #ffffff; width: 100%;
+  }
+  .eq-option:hover { background: #f8fafc; }
+  .eq-checkbox {
+    width: 20px; height: 20px; border-radius: 4px; border: 2px solid;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white; flex-shrink: 0;
+  }
+
+  .force-row {
+    background: #f8fafc; border-radius: 10px; padding: 10px 14px;
+    border: 1px solid #e2e8f0; transition: border-color 0.2s;
+  }
+  .force-row-active { border-color: #cbd5e1; background: #f1f5f9; }
+  .force-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .force-info { display: flex; align-items: center; gap: 8px; }
+  .force-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .force-label { font-size: 13px; font-weight: 600; color: #1e293b; }
+  .force-desc { font-size: 11px; color: #94a3b8; }
+  .dir-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  .ai-card {
+    background: #fffbeb; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+  }
+  .ai-badge { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .ai-icon {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: linear-gradient(135deg, #f97316, #fb923c);
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .ai-value {
+    font-family: 'JetBrains Mono', monospace; font-size: 20px;
+    font-weight: 700; padding: 12px 0; color: #1e293b;
+  }
+
+  .hint-card {
+    background: #fffbeb; border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 12px; padding: 14px; margin-bottom: 16px;
+  }
+  .hint-label { font-size: 12px; font-weight: 700; color: #d97706; margin-bottom: 6px; }
+  .hint-text { font-size: 13px; color: #64748b; line-height: 1.6; }
+
+  .solution-card {
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 16px; margin-top: 16px;
+  }
+  .solution-label { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .solution-mono {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: #64748b; line-height: 1.8;
+  }
+  .solution-mono span { color: #1e293b; }
+
+  .home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; text-align: left; }
+
+  @media (max-width: 640px) {
+    .home-grid { grid-template-columns: 1fr; }
+    .header { flex-wrap: wrap; gap: 12px; }
+    .force-header { flex-direction: column; align-items: flex-start; }
+    .dir-btns { margin-top: 6px; }
+    .ai-value { font-size: 16px; }
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+const C = {
+  bg:"#f8fafc", surface:"#ffffff", surfaceLight:"#f1f5f9",
+  accent:"#3b82f6", accentGlow:"rgba(59,130,246,0.15)",
+  success:"#10b981", error:"#ef4444", warning:"#d97706",
+  text:"#1e293b", textMuted:"#64748b", textDim:"#94a3b8",
+  border:"#e2e8f0", borderLight:"#cbd5e1",
+  typeA:"#7c3aed", typeAGlow:"rgba(124,58,237,0.12)",
+  typeB:"#0891b2", typeBGlow:"rgba(8,145,178,0.12)",
+  typeC:"#ea580c", typeCGlow:"rgba(234,88,12,0.12)",
+};
+
+const FORCES = [
+  {id:"gravity",label:"Weight (W)",color:"#dc2626",desc:"Gravitational pull downward"},
+  {id:"normal",label:"Normal (N)",color:"#2563eb",desc:"Surface pushes perpendicular"},
+  {id:"friction",label:"Friction (f)",color:"#d97706",desc:"Resists relative motion"},
+  {id:"tension",label:"Tension (T)",color:"#059669",desc:"Pull along rope/string"},
+  {id:"applied",label:"Applied (F)",color:"#7c3aed",desc:"External push or pull"},
+  {id:"spring",label:"Spring (Fs)",color:"#db2777",desc:"Restoring force from spring"},
+];
+
+const DIRS = [
+  {id:"up",label:"\u2191 Up"},{id:"down",label:"\u2193 Down"},
+  {id:"left",label:"\u2190 Left"},{id:"right",label:"\u2192 Right"},
+  {id:"up-left",label:"\u2196 Up-Left"},{id:"up-right",label:"\u2197 Up-Right"},
+  {id:"down-left",label:"\u2199 Down-Left"},{id:"down-right",label:"\u2198 Down-Right"},
+];
+
+const typeA = [
+  {id:"a1",title:"Book on a Table",desc:"A 2 kg book rests on a flat horizontal table. The book is stationary.",svg:"book_table",
+   correct:[{f:"gravity",d:"down",m:"19.6 N"},{f:"normal",d:"up",m:"19.6 N"}],
+   expl:"The book has weight acting downward (mg = 2\u00d79.8 = 19.6 N) and the table exerts an equal normal force upward. Net force = 0, so the book stays at rest."},
+  {id:"a2",title:"Box Pushed on Rough Floor",desc:"A 10 kg box is being pushed to the right with a force of 50 N across a rough floor. The box moves at constant velocity.",svg:"box_push",
+   correct:[{f:"gravity",d:"down",m:"98 N"},{f:"normal",d:"up",m:"98 N"},{f:"applied",d:"right",m:"50 N"},{f:"friction",d:"left",m:"50 N"}],
+   expl:"Constant velocity means net force = 0. Weight (98 N) balanced by normal force. Applied force (50 N right) balanced by friction (50 N left)."},
+  {id:"a3",title:"Hanging Lamp",desc:"A 5 kg lamp hangs from the ceiling by a single cable. It is stationary.",svg:"hanging_lamp",
+   correct:[{f:"gravity",d:"down",m:"49 N"},{f:"tension",d:"up",m:"49 N"}],
+   expl:"The lamp's weight (5\u00d79.8 = 49 N) pulls downward. The cable tension (49 N) pulls upward. Equilibrium is maintained."},
+  {id:"a4",title:"Block on Inclined Plane",desc:"A 4 kg block sits on a 30\u00b0 inclined plane. Friction prevents it from sliding.",svg:"incline",
+   correct:[{f:"gravity",d:"down",m:"39.2 N"},{f:"normal",d:"up-left",m:"33.9 N"},{f:"friction",d:"up-right",m:"19.6 N"}],
+   expl:"Weight acts straight down (39.2 N). Normal force is perpendicular to the incline surface. Static friction acts up the incline preventing sliding."},
+];
+
+const typeB = [
+  {id:"b1",title:"Traffic Light at Rest",desc:"A traffic light (15 kg) hangs from two cables making 30\u00b0 angles with the horizontal. Write the equilibrium equations.",
+   sol:{T1:"147 N",T2:"147 N"},stable:true,
+   opts:[{id:"eq1",text:"\u03a3Fx: T\u2082cos30\u00b0 \u2212 T\u2081cos30\u00b0 = 0",ok:true},
+         {id:"eq2",text:"\u03a3Fy: T\u2081sin30\u00b0 + T\u2082sin30\u00b0 \u2212 147 = 0",ok:true},
+         {id:"eq3",text:"\u03a3Fx: T\u2081 + T\u2082 \u2212 147 = 0",ok:false},
+         {id:"eq4",text:"\u03a3Fy: T\u2081cos30\u00b0 + T\u2082cos30\u00b0 = 147",ok:false}]},
+  {id:"b2",title:"Beam with Point Load",desc:"A 6m beam (weightless) is supported at both ends (A and B). A 200 N load is placed 2m from support A. Find reaction forces.",
+   sol:{Ra:"133.3 N",Rb:"66.7 N"},stable:true,
+   opts:[{id:"eq1",text:"\u03a3Fy: R\u2090 + R_b = 200",ok:true},
+         {id:"eq2",text:"\u03a3M_A: R_b \u00d7 6 = 200 \u00d7 2",ok:true},
+         {id:"eq3",text:"\u03a3M_A: R_b \u00d7 6 = 200 \u00d7 4",ok:false},
+         {id:"eq4",text:"\u03a3Fy: R\u2090 = R_b = 100",ok:false}]},
+  {id:"b3",title:"Ladder Against Wall",desc:"A 4m ladder (80 N) leans against a smooth wall at 60\u00b0 from horizontal. The floor is rough. Write equilibrium equations.",
+   sol:{Nw:"23.1 N",Nf:"80 N",f:"23.1 N"},stable:true,
+   opts:[{id:"eq1",text:"\u03a3Fx: f = N_w",ok:true},
+         {id:"eq2",text:"\u03a3Fy: N_f = 80 N",ok:true},
+         {id:"eq3",text:"\u03a3M_base: N_w\u00d74sin60\u00b0 = 80\u00d72cos60\u00b0",ok:true},
+         {id:"eq4",text:"\u03a3M_base: N_w\u00d74cos60\u00b0 = 80\u00d72sin60\u00b0",ok:false}]},
+  {id:"b4",title:"Cantilever with Two Loads",desc:"A cantilever beam (fixed at left wall) has a 100 N load at 2m and a 150 N load at 4m from the wall. Find wall reactions.",
+   sol:{Ry:"250 N",M:"800 N\u00b7m"},stable:true,
+   opts:[{id:"eq1",text:"\u03a3Fy: Ry = 100 + 150 = 250 N",ok:true},
+         {id:"eq2",text:"\u03a3M_wall: M = 100\u00d72 + 150\u00d74 = 800 N\u00b7m",ok:true},
+         {id:"eq3",text:"\u03a3M_wall: M = 100\u00d74 + 150\u00d72 = 700 N\u00b7m",ok:false},
+         {id:"eq4",text:"\u03a3Fy: Ry = (100+150)/2 = 125 N",ok:false}]},
+];
+
+const typeCC = [
+  {id:"c1",title:"Elevator Cable Tension",
+   prob:"A 1000 kg elevator accelerates upward at 2 m/s\u00b2. An AI calculated the cable tension as 7800 N.",
+   ai:"T = 7800 N",ok:false,
+   ans:"T = m(g + a) = 1000(9.8 + 2) = 11,800 N",
+   err:"The AI used T = mg \u2212 ma instead of T = mg + ma. When accelerating UP, tension must exceed weight, not be less than it.",
+   hint:"When an elevator accelerates upward, do you feel heavier or lighter? The tension should reflect that."},
+  {id:"c2",title:"Sliding Block Friction",
+   prob:"A 5 kg block slides down a 45\u00b0 incline with \u03bck = 0.3. An AI calculated the acceleration as 4.85 m/s\u00b2.",
+   ai:"a = 4.85 m/s\u00b2",ok:true,
+   ans:"a = g(sin45\u00b0 \u2212 \u03bck\u00d7cos45\u00b0) = 9.8(0.707 \u2212 0.3\u00d70.707) = 4.85 m/s\u00b2",
+   err:"The AI's answer is correct. On a 45\u00b0 incline with friction, a = g(sin\u03b8 \u2212 \u03bccos\u03b8) = 4.85 m/s\u00b2.",
+   hint:"Check: Is the acceleration less than gsin45\u00b0 (6.93)? It should be, since friction opposes motion."},
+  {id:"c3",title:"Two-Block System",
+   prob:"Two blocks (3 kg and 5 kg) connected by a string are pulled by 40 N on a frictionless surface. An AI says the tension in the string between them is 25 N.",
+   ai:"T = 25 N",ok:false,
+   ans:"a = 40/8 = 5 m/s\u00b2, T = 3 \u00d7 5 = 15 N",
+   err:"The AI incorrectly used the wrong mass. The tension on the 3 kg block is T = 3 \u00d7 5 = 15 N, not 25 N.",
+   hint:"Find the system acceleration first (F/total mass). Then find the force needed to accelerate just the rear block."},
+  {id:"c4",title:"Atwood Machine",
+   prob:"An Atwood machine has masses of 6 kg and 4 kg. An AI says both masses accelerate at 1.96 m/s\u00b2 and the tension is 47.04 N.",
+   ai:"a = 1.96 m/s\u00b2, T = 47.04 N",ok:true,
+   ans:"a = (6\u22124)g/(6+4) = 1.96 m/s\u00b2, T = 2\u00d76\u00d74\u00d7g/(6+4) = 47.04 N",
+   err:"The AI is correct. a = (m\u2081\u2212m\u2082)g/(m\u2081+m\u2082) = 1.96 m/s\u00b2 and T = 2m\u2081m\u2082g/(m\u2081+m\u2082) = 47.04 N.",
+   hint:"For an Atwood machine: a = (m\u2081\u2212m\u2082)g/(m\u2081+m\u2082). Check if 1.96 m/s\u00b2 matches."},
+];
+
+function getChallenges(t) { return t==="a"?typeA:t==="b"?typeB:typeCC; }
+function getColor(t) { return t==="a"?C.typeA:t==="b"?C.typeB:C.typeC; }
+function getLabel(t) { return t==="a"?"FBD Drawing":t==="b"?"Equilibrium Setup":"Sense Check"; }
+
+// SVG SCENES - light mode adapted
+const arrowDefs = `<defs>
+  <marker id="aR" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#dc2626"/></marker>
+  <marker id="aB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker>
+  <marker id="aG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker>
+  <marker id="aY" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#d97706"/></marker>
+  <marker id="aP" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker>
+  <filter id="sh"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-opacity="0.12"/></filter>
+</defs>`;
+
+function sceneSVG(type, showFBD) {
+  const scenes = {
+    book_table: `<svg viewBox="0 0 400 300" width="100%">${arrowDefs}
+      <linearGradient id="tG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a78b6e"/><stop offset="100%" stop-color="#8b7355"/></linearGradient>
+      <rect x="40" y="180" width="320" height="20" rx="3" fill="url(#tG)"/>
+      <rect x="60" y="200" width="12" height="80" rx="2" fill="#8b7355"/>
+      <rect x="328" y="200" width="12" height="80" rx="2" fill="#8b7355"/>
+      <rect x="140" y="140" width="120" height="40" rx="6" fill="#3b82f6" filter="url(#sh)"/>
+      <text x="200" y="165" text-anchor="middle" fill="white" font-size="14" font-weight="600">2 kg</text>
+      ${showFBD?`<circle cx="200" cy="160" r="5" fill="white" stroke="#334155" stroke-width="2"/>
+      <line x1="200" y1="165" x2="200" y2="235" stroke="#dc2626" stroke-width="3" marker-end="url(#aR)"/>
+      <text x="215" y="230" fill="#dc2626" font-size="13" font-weight="700">W = 19.6 N</text>
+      <line x1="200" y1="155" x2="200" y2="90" stroke="#2563eb" stroke-width="3" marker-end="url(#aB)"/>
+      <text x="215" y="100" fill="#2563eb" font-size="13" font-weight="700">N = 19.6 N</text>`:""}</svg>`,
+
+    box_push: `<svg viewBox="0 0 400 300" width="100%">${arrowDefs}
+      <pattern id="fP" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="20" x2="20" y2="20" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="10" y1="20" x2="20" y2="10" stroke="#cbd5e1" stroke-width="0.5"/>
+      </pattern>
+      <rect x="0" y="210" width="400" height="90" fill="url(#fP)"/>
+      <rect x="0" y="205" width="400" height="8" fill="#94a3b8"/>
+      <rect x="160" y="145" width="80" height="60" rx="6" fill="#f59e0b" filter="url(#sh)"/>
+      <text x="200" y="180" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="700">10 kg</text>
+      <line x1="100" y1="175" x2="155" y2="175" stroke="#7c3aed" stroke-width="4" stroke-dasharray="6 3"/>
+      <polygon points="155,170 165,175 155,180" fill="#7c3aed"/>
+      <text x="110" y="165" fill="#7c3aed" font-size="12" font-weight="600">50 N push</text>
+      <text x="200" y="250" text-anchor="middle" fill="#94a3b8" font-size="11">Constant velocity \u2192</text>
+      ${showFBD?`<circle cx="200" cy="175" r="5" fill="white" stroke="#334155" stroke-width="2"/>
+      <line x1="200" y1="180" x2="200" y2="250" stroke="#dc2626" stroke-width="3" marker-end="url(#aR)"/>
+      <text x="215" y="245" fill="#dc2626" font-size="12" font-weight="700">W = 98 N</text>
+      <line x1="200" y1="170" x2="200" y2="105" stroke="#2563eb" stroke-width="3" marker-end="url(#aB)"/>
+      <text x="215" y="115" fill="#2563eb" font-size="12" font-weight="700">N = 98 N</text>
+      <line x1="205" y1="175" x2="275" y2="175" stroke="#7c3aed" stroke-width="3" marker-end="url(#aP)"/>
+      <text x="250" y="165" fill="#7c3aed" font-size="12" font-weight="700">F = 50 N</text>
+      <line x1="195" y1="175" x2="125" y2="175" stroke="#d97706" stroke-width="3" marker-end="url(#aY)"/>
+      <text x="110" y="190" fill="#d97706" font-size="12" font-weight="700">f = 50 N</text>`:""}</svg>`,
+
+    hanging_lamp: `<svg viewBox="0 0 400 300" width="100%">${arrowDefs}
+      <rect x="0" y="0" width="400" height="25" fill="#94a3b8" rx="2"/>
+      <line x1="200" y1="25" x2="200" y2="120" stroke="#64748b" stroke-width="3"/>
+      <ellipse cx="200" cy="135" rx="40" ry="15" fill="#fbbf24" opacity="0.3"/>
+      <path d="M170 120 L200 100 L230 120 L225 145 Q200 160 175 145 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+      <circle cx="200" cy="130" r="8" fill="#fef3c7"/>
+      <text x="200" y="185" text-anchor="middle" fill="#64748b" font-size="13">5 kg lamp</text>
+      ${showFBD?`<circle cx="200" cy="125" r="5" fill="white" stroke="#334155" stroke-width="2"/>
+      <line x1="200" y1="130" x2="200" y2="215" stroke="#dc2626" stroke-width="3" marker-end="url(#aR)"/>
+      <text x="215" y="210" fill="#dc2626" font-size="13" font-weight="700">W = 49 N</text>
+      <line x1="200" y1="120" x2="200" y2="50" stroke="#059669" stroke-width="3" marker-end="url(#aG)"/>
+      <text x="215" y="65" fill="#059669" font-size="13" font-weight="700">T = 49 N</text>`:""}</svg>`,
+
+    incline: `<svg viewBox="0 0 400 300" width="100%">${arrowDefs}
+      <polygon points="60,260 340,260 340,100" fill="#cbd5e1" stroke="#94a3b8" stroke-width="2"/>
+      <text x="200" y="280" text-anchor="middle" fill="#94a3b8" font-size="11">30\u00b0 incline</text>
+      <text x="125" y="258" fill="#64748b" font-size="12">30\u00b0</text>
+      <g transform="translate(240,165) rotate(-30)"><rect x="-25" y="-20" width="50" height="40" rx="6" fill="#10b981" filter="url(#sh)"/>
+      <text x="0" y="5" text-anchor="middle" fill="white" font-size="11" font-weight="700">4 kg</text></g>
+      ${showFBD?`<circle cx="240" cy="168" r="5" fill="white" stroke="#334155" stroke-width="2"/>
+      <line x1="240" y1="173" x2="240" y2="253" stroke="#dc2626" stroke-width="3" marker-end="url(#aR)"/>
+      <text x="250" y="248" fill="#dc2626" font-size="11" font-weight="700">W = 39.2 N</text>
+      <line x1="237" y1="163" x2="197" y2="93" stroke="#2563eb" stroke-width="3" marker-end="url(#aB)"/>
+      <text x="165" y="95" fill="#2563eb" font-size="11" font-weight="700">N = 33.9 N</text>
+      <line x1="243" y1="163" x2="303" y2="128" stroke="#d97706" stroke-width="3" marker-end="url(#aY)"/>
+      <text x="290" y="120" fill="#d97706" font-size="11" font-weight="700">f = 19.6 N</text>`:""}</svg>`,
+  };
+  return scenes[type]||"";
+}
+
+function typeBSVG(id) {
+  const d = {
+    b1:`<svg viewBox="0 0 400 260" width="100%">
+      <defs><marker id="xR" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#dc2626"/></marker>
+      <marker id="xG" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#059669"/></marker>
+      <marker id="xB" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2563eb"/></marker></defs>
+      <line x1="120" y1="60" x2="200" y2="160" stroke="#64748b" stroke-width="2.5"/>
+      <line x1="280" y1="60" x2="200" y2="160" stroke="#64748b" stroke-width="2.5"/>
+      <rect x="100" y="40" width="40" height="20" rx="3" fill="#94a3b8"/>
+      <rect x="260" y="40" width="40" height="20" rx="3" fill="#94a3b8"/>
+      <rect x="175" y="155" width="50" height="35" rx="4" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
+      <text x="200" y="177" text-anchor="middle" fill="#1e293b" font-size="11" font-weight="700">15 kg</text>
+      <circle cx="200" cy="170" r="4" fill="white" stroke="#334155" stroke-width="2"/>
+      <line x1="200" y1="175" x2="200" y2="240" stroke="#dc2626" stroke-width="2.5" marker-end="url(#xR)"/>
+      <text x="215" y="235" fill="#dc2626" font-size="12" font-weight="600">W = 147 N</text>
+      <line x1="200" y1="165" x2="135" y2="90" stroke="#059669" stroke-width="2.5" marker-end="url(#xG)"/>
+      <text x="100" y="88" fill="#059669" font-size="12" font-weight="600">T\u2081</text>
+      <line x1="200" y1="165" x2="265" y2="90" stroke="#2563eb" stroke-width="2.5" marker-end="url(#xB)"/>
+      <text x="272" y="88" fill="#2563eb" font-size="12" font-weight="600">T\u2082</text>
+      <text x="155" y="115" fill="#64748b" font-size="10">30\u00b0</text>
+      <text x="235" y="115" fill="#64748b" font-size="10">30\u00b0</text></svg>`,
+
+    b2:`<svg viewBox="0 0 400 250" width="100%">
+      <defs><marker id="xBu" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2563eb"/></marker>
+      <marker id="xGu" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#059669"/></marker></defs>
+      <rect x="50" y="120" width="300" height="12" rx="2" fill="#94a3b8"/>
+      <polygon points="45,132 55,132 50,155" fill="#64748b"/><polygon points="345,132 355,132 350,155" fill="#64748b"/>
+      <text x="50" y="170" text-anchor="middle" fill="#64748b" font-size="11">A</text>
+      <text x="350" y="170" text-anchor="middle" fill="#64748b" font-size="11">B</text>
+      <line x1="150" y1="120" x2="150" y2="70" stroke="#dc2626" stroke-width="2.5"/>
+      <polygon points="146,74 150,60 154,74" fill="#dc2626"/>
+      <text x="150" y="55" text-anchor="middle" fill="#dc2626" font-size="12" font-weight="600">200 N \u2193</text>
+      <text x="100" y="145" fill="#64748b" font-size="10">2m</text>
+      <text x="250" y="145" fill="#64748b" font-size="10">4m</text>
+      <line x1="50" y1="132" x2="50" y2="195" stroke="#2563eb" stroke-width="2.5" marker-end="url(#xBu)"/>
+      <text x="50" y="210" text-anchor="middle" fill="#2563eb" font-size="12" font-weight="600">R\u2090 \u2191</text>
+      <line x1="350" y1="132" x2="350" y2="195" stroke="#059669" stroke-width="2.5" marker-end="url(#xGu)"/>
+      <text x="350" y="210" text-anchor="middle" fill="#059669" font-size="12" font-weight="600">R_b \u2191</text></svg>`,
+
+    b3:`<svg viewBox="0 0 400 280" width="100%">
+      <defs><marker id="xRd" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#dc2626"/></marker>
+      <marker id="xBl" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2563eb"/></marker>
+      <marker id="xGn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#059669"/></marker>
+      <marker id="xYr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#d97706"/></marker></defs>
+      <rect x="310" y="30" width="20" height="240" fill="#94a3b8" rx="2"/>
+      <line x1="80" y1="260" x2="310" y2="60" stroke="#a1a1aa" stroke-width="5" stroke-linecap="round"/>
+      <text x="200" y="140" text-anchor="middle" fill="#64748b" font-size="10" transform="rotate(-40,200,140)">4m ladder (80N)</text>
+      <circle cx="195" cy="160" r="3" fill="#dc2626"/>
+      <line x1="195" y1="163" x2="195" y2="220" stroke="#dc2626" stroke-width="2" marker-end="url(#xRd)"/>
+      <text x="205" y="218" fill="#dc2626" font-size="11" font-weight="600">W=80N</text>
+      <line x1="310" y1="60" x2="260" y2="60" stroke="#2563eb" stroke-width="2" marker-end="url(#xBl)"/>
+      <text x="248" y="52" fill="#2563eb" font-size="11" font-weight="600">N_w</text>
+      <line x1="80" y1="260" x2="80" y2="215" stroke="#059669" stroke-width="2" marker-end="url(#xGn)"/>
+      <text x="62" y="212" fill="#059669" font-size="11" font-weight="600">N_f</text>
+      <line x1="80" y1="260" x2="135" y2="260" stroke="#d97706" stroke-width="2" marker-end="url(#xYr)"/>
+      <text x="115" y="252" fill="#d97706" font-size="11" font-weight="600">f</text>
+      <text x="120" y="253" fill="#64748b" font-size="10">60\u00b0</text>
+      <rect x="0" y="260" width="400" height="20" fill="#cbd5e1" rx="2"/></svg>`,
+
+    b4:`<svg viewBox="0 0 400 250" width="100%">
+      <defs><marker id="xRd2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#dc2626"/></marker>
+      <marker id="xBu2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2563eb"/></marker>
+      <marker id="xPm" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#7c3aed"/></marker></defs>
+      <rect x="30" y="50" width="20" height="180" fill="#94a3b8" rx="2"/>
+      <rect x="50" y="120" width="300" height="12" rx="2" fill="#94a3b8"/>
+      <rect x="40" y="110" width="20" height="32" rx="2" fill="#64748b" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="150" y1="132" x2="150" y2="195" stroke="#dc2626" stroke-width="2.5" marker-end="url(#xRd2)"/>
+      <text x="150" y="212" text-anchor="middle" fill="#dc2626" font-size="11" font-weight="600">F\u2081=100N</text>
+      <line x1="250" y1="132" x2="250" y2="195" stroke="#dc2626" stroke-width="2.5" marker-end="url(#xRd2)"/>
+      <text x="250" y="212" text-anchor="middle" fill="#dc2626" font-size="11" font-weight="600">F\u2082=150N</text>
+      <line x1="50" y1="126" x2="50" y2="70" stroke="#2563eb" stroke-width="2.5" marker-end="url(#xBu2)"/>
+      <text x="50" y="60" text-anchor="middle" fill="#2563eb" font-size="11" font-weight="600">Ry</text>
+      <path d="M30,85 Q15,95 30,105" fill="none" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#xPm)"/>
+      <text x="8" y="98" fill="#7c3aed" font-size="11" font-weight="600">M</text>
+      <text x="100" y="145" fill="#64748b" font-size="10">2m</text>
+      <text x="200" y="145" fill="#64748b" font-size="10">2m</text></svg>`,
+  };
+  return d[id]||"";
+}
+
+// STATE
+let state = {
+  screen:"home", type:null, idx:0,
+  score:{a:0,b:0,c:0}, attempted:{a:0,b:0,c:0},
+  selectedForces:[], selectedEqs:[],
+  showFBD:false, submitted:false, isCorrect:null,
+  typeCAnswer:null, showHint:false,
+};
+
+const root = document.getElementById("root");
+
+function render() {
+  root.innerHTML = "";
+  if (state.screen==="home") renderHome();
+  else if (state.screen==="challenge") renderChallenge();
+  else renderResults();
+}
+
+function renderHome() {
+  const types = [
+    {t:"a",title:"FBD Drawing",icon:"\u270f\ufe0f",color:C.typeA,glow:C.typeAGlow,
+     desc:"See a scenario, identify all forces acting on the object, and check against the correct FBD."},
+    {t:"b",title:"Equilibrium Setup",icon:"\u2696\ufe0f",color:C.typeB,glow:C.typeBGlow,
+     desc:"Given a free body diagram, select the correct equilibrium equations and verify structural stability."},
+    {t:"c",title:"Sense Check",icon:"\ud83d\udd0d",color:C.typeC,glow:C.typeCGlow,
+     desc:"An AI calculated an answer for a force problem. Is it physically reasonable or does it contain an error?"},
+  ];
+
+  root.innerHTML = `<div class="container fade-in" style="text-align:center;padding-top:40px">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:20px;
+      background:linear-gradient(135deg,${C.accent},#6366f1,#8b5cf6);box-shadow:0 8px 32px ${C.accentGlow};margin-bottom:24px;font-size:32px">
+      \u26a1</div>
+    <h1 style="font-size:clamp(26px,5vw,36px);font-weight:800;letter-spacing:-0.03em;margin-bottom:8px;color:#0f172a">
+      Forces & Free Body Diagrams</h1>
+    <p style="font-size:16px;color:${C.textMuted};max-width:520px;margin:0 auto 40px;line-height:1.6">
+      Master force analysis through 12 interactive challenges. Draw FBDs, solve equilibrium equations, and validate AI calculations.</p>
+    <div class="home-grid" id="homeGrid"></div>
+  </div>`;
+
+  const grid = document.getElementById("homeGrid");
+  types.forEach(t => {
+    const card = document.createElement("div");
+    card.className = "card type-card";
+    card.style.overflow = "hidden";
+    card.innerHTML = `
+      <div class="card-accent-top" style="background:linear-gradient(90deg,${t.color},${t.color}88)"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span style="font-size:28px">${t.icon}</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${t.color};text-transform:uppercase;letter-spacing:0.06em">Type ${t.t.toUpperCase()} - 4 Challenges</div>
+          <div style="font-size:18px;font-weight:700;letter-spacing:-0.01em;color:#0f172a">${t.title}</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:${C.textMuted};line-height:1.5;margin-bottom:16px">${t.desc}</p>
+      <button class="btn btn-full" style="background:${t.color};color:white">Start Challenges \u2192</button>`;
+    card.addEventListener("mouseenter", () => { card.style.borderColor=t.color+"50"; card.style.boxShadow=`0 8px 32px ${t.glow}`; });
+    card.addEventListener("mouseleave", () => { card.style.borderColor=C.border; card.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"; });
+    card.addEventListener("click", () => { state={...state,screen:"challenge",type:t.t,idx:0,selectedForces:[],selectedEqs:[],showFBD:false,submitted:false,isCorrect:null,typeCAnswer:null,showHint:false}; render(); });
+    grid.appendChild(card);
+  });
+}
+
+function renderResults() {
+  const s=state.score[state.type], total=4, pct=Math.round(s/total*100);
+  const col=getColor(state.type), lab=getLabel(state.type);
+  const emoji=pct>=75?"\ud83c\udfc6":pct>=50?"\ud83d\udcaa":"\ud83d\udcda";
+  const msg=pct>=75?"Excellent Work!":pct>=50?"Good Progress!":"Keep Practicing!";
+
+  root.innerHTML = `<div class="container fade-in" style="text-align:center;padding-top:60px">
+    <div style="font-size:64px;margin-bottom:16px">${emoji}</div>
+    <h2 style="font-size:28px;font-weight:800;margin-bottom:8px;color:#0f172a">${msg}</h2>
+    <div class="tag" style="background:${col}12;color:${col};margin:0 auto 24px;display:inline-flex">Type ${state.type.toUpperCase()} - ${lab}</div>
+    <div class="card" style="max-width:400px;margin:0 auto 24px;display:inline-block">
+      <div style="font-size:56px;font-weight:800;color:${col}">${s}/${total}</div>
+      <div style="font-size:14px;color:${C.textMuted};margin-top:4px">Challenges Correct</div>
+      <div class="progress-bar" style="margin-top:16px"><div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}cc)"></div></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap" id="resultBtns"></div>
+  </div>`;
+
+  const btns=document.getElementById("resultBtns");
+  const retry=document.createElement("button");
+  retry.className="btn"; retry.style.background=col; retry.style.color="white";
+  retry.textContent="\ud83d\udd04 Retry Type "+state.type.toUpperCase();
+  retry.addEventListener("click",()=>{state={...state,screen:"challenge",idx:0,selectedForces:[],selectedEqs:[],showFBD:false,submitted:false,isCorrect:null,typeCAnswer:null,showHint:false};render();});
+  btns.appendChild(retry);
+
+  const back=document.createElement("button");
+  back.className="btn btn-outline"; back.style.border=`2px solid ${C.textDim}`; back.style.color=C.textDim;
+  back.textContent="\u2190 Back to Menu";
+  back.addEventListener("click",()=>{state.screen="home";render();});
+  btns.appendChild(back);
+}
+
+function renderChallenge() {
+  const ch=getChallenges(state.type)[state.idx];
+  const col=getColor(state.type), lab=getLabel(state.type);
+  const total=getChallenges(state.type).length;
+  const progPct=(state.idx/total)*100+(state.submitted?25:0);
+
+  root.innerHTML = `<div class="container">
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">\u26a1</div>
+        <div><div class="logo-text">Force Lab</div><div class="logo-sub">${lab}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="score-badge"><span style="color:${col}">\u2605</span> ${state.score[state.type]}/${state.idx+(state.submitted?1:0)}</div>
+        <button class="btn" id="closeBtn" style="background:#f1f5f9;border:1px solid #e2e8f0;color:${C.textDim};padding:8px 14px;font-size:13px">\u2715</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div class="tag" style="background:${col}12;color:${col}">${state.idx+1} / ${total}</div>
+      <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${Math.min(progPct,100)}%;background:linear-gradient(90deg,${col},${col}cc)"></div></div>
+    </div>
+    <div class="card fade-in" id="challengeCard">
+      <div class="card-accent-top" style="background:linear-gradient(90deg,${col},${col}88)"></div>
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em;color:#0f172a">${ch.title}</h2>
+      <p style="font-size:14px;color:${C.textMuted};line-height:1.6;margin-bottom:20px">${ch.desc||ch.prob}</p>
+      <div id="challengeBody"></div>
+      <div id="feedbackArea"></div>
+    </div>
+  </div>`;
+
+  document.getElementById("closeBtn").addEventListener("click",()=>{state.screen="home";render();});
+
+  const body=document.getElementById("challengeBody");
+  if(state.type==="a") renderTypeA(body,ch);
+  else if(state.type==="b") renderTypeB(body,ch);
+  else renderTypeC(body,ch);
+  if(state.submitted) renderFeedback(ch);
+}
+
+function renderTypeA(body,ch) {
+  body.innerHTML = `<div class="scene-box">${sceneSVG(ch.svg,state.showFBD)}</div>`;
+  if(state.submitted) return;
+
+  const grid=document.createElement("div"); grid.style.marginBottom="16px";
+  grid.innerHTML=`<div style="font-size:13px;font-weight:700;color:${C.textDim};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Select forces and their directions</div>`;
+  const list=document.createElement("div"); list.style.display="grid"; list.style.gap="8px";
+
+  FORCES.forEach(force=>{
+    const sel=state.selectedForces.find(f=>f.f===force.id);
+    const row=document.createElement("div");
+    row.className="force-row"+(sel?" force-row-active":"");
+    if(sel) row.style.borderColor=force.color+"40";
+
+    let dirHTML=DIRS.map(d=>{
+      const active=sel&&sel.d===d.id;
+      return `<button class="btn-sm dir-btn" data-force="${force.id}" data-dir="${d.id}"
+        style="border-color:${active?force.color:C.border};background:${active?force.color+"15":"transparent"};color:${active?force.color:C.textDim}">${d.label}</button>`;
+    }).join("");
+
+    row.innerHTML=`<div class="force-header">
+      <div class="force-info">
+        <div class="force-dot" style="background:${force.color}"></div>
+        <span class="force-label">${force.label}</span>
+        <span class="force-desc">${force.desc}</span>
+      </div>
+      <div class="dir-btns">${dirHTML}</div>
+    </div>`;
+    list.appendChild(row);
+  });
+
+  grid.appendChild(list);
+  body.appendChild(grid);
+
+  list.addEventListener("click",e=>{
+    const btn=e.target.closest(".dir-btn");
+    if(!btn||state.submitted) return;
+    const fid=btn.dataset.force, did=btn.dataset.dir;
+    const existing=state.selectedForces.find(f=>f.f===fid);
+    if(existing&&existing.d===did) state.selectedForces=state.selectedForces.filter(f=>f.f!==fid);
+    else state.selectedForces=[...state.selectedForces.filter(f=>f.f!==fid),{f:fid,d:did}];
+    render();
+  });
+
+  const actions=document.createElement("div");
+  actions.style.display="flex"; actions.style.alignItems="center"; actions.style.gap="12px";
+  const submitBtn=document.createElement("button");
+  submitBtn.className="btn"; submitBtn.style.background=C.typeA; submitBtn.style.color="white";
+  submitBtn.textContent="Check My FBD \u2192";
+  submitBtn.disabled=state.selectedForces.length===0;
+  if(state.selectedForces.length===0) submitBtn.style.opacity="0.5";
+  submitBtn.addEventListener("click",()=>{
+    const correct=ch.correct, user=state.selectedForces;
+    const allOk=correct.length===user.length&&correct.every(cf=>user.some(uf=>uf.f===cf.f&&uf.d===cf.d));
+    state.isCorrect=allOk; state.submitted=true; state.showFBD=true;
+    if(allOk) state.score.a++;
+    state.attempted.a++;
+    render();
+  });
+  actions.appendChild(submitBtn);
+  const cnt=document.createElement("span");
+  cnt.style.cssText=`font-size:12px;color:${C.textDim}`;
+  cnt.textContent=`${state.selectedForces.length} force${state.selectedForces.length!==1?"s":""} selected`;
+  actions.appendChild(cnt);
+  body.appendChild(actions);
+}
+
+function renderTypeB(body,ch) {
+  body.innerHTML=`<div class="scene-box">${typeBSVG(ch.id)}</div>
+    <div style="font-size:13px;font-weight:700;color:${C.textDim};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">
+      Select all correct equilibrium equations</div>
+    <div id="eqList" style="display:grid;gap:8px"></div>
+    <div id="eqActions" style="margin-top:16px"></div>`;
+
+  const list=document.getElementById("eqList");
+  ch.opts.forEach(opt=>{
+    const sel=state.selectedEqs.includes(opt.id);
+    let bc=sel?C.typeB+"40":C.border;
+    let bg="#ffffff";
+    let suffix="";
+    if(state.submitted){
+      if(opt.ok){bc=C.success+"40";bg=C.success+"08";suffix=`<span style="margin-left:auto;color:${C.success};font-size:12px;font-weight:700">\u2713 Correct</span>`;}
+      else if(sel&&!opt.ok){bc=C.error+"40";bg=C.error+"06";suffix=`<span style="margin-left:auto;color:${C.error};font-size:12px;font-weight:700">\u2717 Incorrect</span>`;}
+    }
+    const btn=document.createElement("button");
+    btn.className="eq-option";
+    btn.style.borderColor=bc;
+    btn.style.background=sel?(state.submitted?bg:C.typeB+"08"):bg;
+    if(state.submitted) btn.style.cursor="default";
+    btn.innerHTML=`<div class="eq-checkbox" style="border-color:${sel?C.typeB:C.border};background:${sel?C.typeB:"transparent"}">${sel?"\u2713":""}</div>${opt.text}${suffix}`;
+    btn.addEventListener("click",()=>{
+      if(state.submitted) return;
+      if(state.selectedEqs.includes(opt.id)) state.selectedEqs=state.selectedEqs.filter(e=>e!==opt.id);
+      else state.selectedEqs=[...state.selectedEqs,opt.id];
+      render();
+    });
+    list.appendChild(btn);
+  });
+
+  const actions=document.getElementById("eqActions");
+  if(!state.submitted){
+    const btn=document.createElement("button");
+    btn.className="btn"; btn.style.background=C.typeB; btn.style.color="white";
+    btn.textContent="Verify Equations \u2192";
+    btn.disabled=state.selectedEqs.length===0;
+    if(state.selectedEqs.length===0) btn.style.opacity="0.5";
+    btn.addEventListener("click",()=>{
+      const correctIds=ch.opts.filter(o=>o.ok).map(o=>o.id);
+      const allOk=correctIds.length===state.selectedEqs.length&&correctIds.every(id=>state.selectedEqs.includes(id));
+      state.isCorrect=allOk; state.submitted=true;
+      if(allOk) state.score.b++;
+      state.attempted.b++;
+      render();
+    });
+    actions.appendChild(btn);
+  } else {
+    const sol=document.createElement("div");
+    sol.className="solution-card";
+    sol.innerHTML=`<div class="solution-label" style="color:${C.typeB}">Solution</div>
+      <div class="solution-mono">${Object.entries(ch.sol).map(([k,v])=>`<span>${k}</span> = ${v}`).join("<br>")}</div>
+      <div style="margin-top:8px;font-size:13px;color:${ch.stable?C.success:C.error};font-weight:600">
+        ${ch.stable?"\u2713 Structure is in static equilibrium":"\u2717 Structure is NOT in equilibrium"}</div>`;
+    actions.appendChild(sol);
+  }
+}
+
+function renderTypeC(body,ch) {
+  body.innerHTML=`<div class="ai-card" style="border:1px solid ${C.typeC}25">
+    <div class="ai-badge">
+      <div class="ai-icon">\ud83e\udd16</div>
+      <span style="font-size:12px;font-weight:700;color:${C.typeC};text-transform:uppercase;letter-spacing:0.06em">AI Calculation</span>
+    </div>
+    <div class="ai-value">${ch.ai}</div>
+  </div>
+  <div id="hintArea"></div>
+  <div id="cActions"></div>`;
+
+  const hintArea=document.getElementById("hintArea");
+  const actions=document.getElementById("cActions");
+
+  if(!state.submitted){
+    if(!state.showHint){
+      const hintBtn=document.createElement("button");
+      hintBtn.className="btn btn-outline"; hintBtn.style.border=`2px solid ${C.warning}`; hintBtn.style.color=C.warning;
+      hintBtn.style.marginBottom="16px"; hintBtn.style.fontSize="13px";
+      hintBtn.textContent="\ud83d\udca1 Need a hint?";
+      hintBtn.addEventListener("click",()=>{state.showHint=true;render();});
+      hintArea.appendChild(hintBtn);
+    } else {
+      hintArea.innerHTML=`<div class="hint-card"><div class="hint-label">\ud83d\udca1 HINT</div><div class="hint-text">${ch.hint}</div></div>`;
+    }
+
+    actions.style.display="flex"; actions.style.gap="12px";
+    const okBtn=document.createElement("button");
+    okBtn.className="btn"; okBtn.style.background=C.success; okBtn.style.color="white";
+    okBtn.textContent="\u2713 Answer is Correct";
+    okBtn.addEventListener("click",()=>submitC("correct",ch));
+
+    const errBtn=document.createElement("button");
+    errBtn.className="btn"; errBtn.style.background=C.error; errBtn.style.color="white";
+    errBtn.textContent="\u2717 Answer has Error";
+    errBtn.addEventListener("click",()=>submitC("wrong",ch));
+
+    actions.appendChild(okBtn); actions.appendChild(errBtn);
+  }
+}
+
+function submitC(answer,ch) {
+  const correct=(answer==="correct")===ch.ok;
+  state.typeCAnswer=answer; state.isCorrect=correct; state.submitted=true;
+  if(correct) state.score.c++;
+  state.attempted.c++;
+  render();
+}
+
+function renderFeedback(ch) {
+  const area=document.getElementById("feedbackArea");
+  if(!area||!state.submitted) return;
+  const col=getColor(state.type), isOk=state.isCorrect;
+  let text="";
+  if(state.type==="a") text=ch.expl;
+  else if(state.type==="b") text=(isOk?"You selected the right equilibrium equations. ":"Some equations were incorrect. ")+"The correct equations lead to: "+Object.entries(ch.sol).map(([k,v])=>`${k} = ${v}`).join(", ")+".";
+  else {
+    text=(ch.ok?"The AI's answer was actually correct. ":"The AI's answer contained an error. ")+ch.err+
+      `<br><br><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${C.text}">Correct: ${ch.ans}</span>`;
+  }
+  const total=getChallenges(state.type).length;
+  const isLast=state.idx>=total-1;
+
+  area.innerHTML=`<div class="feedback ${isOk?"feedback-correct":"feedback-wrong"} pop-in">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:24px">${isOk?"\u2705":"\u274c"}</span>
+      <span style="font-size:16px;font-weight:700;color:${isOk?C.success:C.error}">${isOk?"Correct!":"Not quite right"}</span>
+    </div>
+    <p style="font-size:13px;color:${C.textMuted};line-height:1.7">${text}</p>
+    <div style="margin-top:16px"><button class="btn" id="nextBtn" style="background:${col};color:white">${isLast?"View Results \u2192":"Next Challenge \u2192"}</button></div>
+  </div>`;
+
+  document.getElementById("nextBtn").addEventListener("click",()=>{
+    if(isLast) state.screen="results";
+    else state.idx++;
+    state.selectedForces=[]; state.selectedEqs=[]; state.showFBD=false;
+    state.submitted=false; state.isCorrect=null; state.typeCAnswer=null; state.showHint=false;
+    render();
+  });
+}
+
+render();
+</script>
+</body>
+</html>
